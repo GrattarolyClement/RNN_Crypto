@@ -5,6 +5,7 @@ Created on Tue Apr  7 16:05:47 2020
 
 @author: clementgrattaroly
 """
+
 # Importing the Keras libraries and packages
 
 
@@ -87,30 +88,6 @@ Data_Train = FinalDataSet.iloc[:-N_Train].values
 
 Data_Valid = FinalDataSet.iloc[-N_Train:].values
 
-
-
-def Norm_Seq(Seq) : 
-    Normalized_Sequences = []
-    for col_i in range(Seq.shape[1]) : 
-        Normalized_Col = [((float(p))/float(Seq[0,col_i])-1) for p in Seq[:,col_i]]
-        Normalized_Sequences.append(Normalized_Col)
-    return np.array(Normalized_Sequences)
-        
-     
-    
-
-
-### Standardisation des données ###
-"""
-Sc = StandardScaler()
-
-X_Train_Norm = Sc.fit_transform(X_Train)
-X_Valid_Norm = Sc.transform(X_Valid)
-
-Y_Train_Norm = Sc.fit_transform(Y_Train)
-Y_Valid_Norm = Sc.transform(Y_Valid)
-"""
-
 ### Sequences creation ###
 
 Length_Seq = 20
@@ -127,16 +104,6 @@ for col in range(Data_Train.shape[1]) :
 Data_Train_Seq = np.array(Data_Train_Seq)
 
 Data_Train_Seq = np.swapaxes(np.swapaxes(Data_Train_Seq, 0, 1), 1, 2)
-
-
-"""
-Y_Train_Seq = []
-
-for i in range(Length_Seq,len(Y_Train)):
-    Y_Train_Seq.append(Y_Train_Norm[i,0])
-
-Y_Train_Seq = np.array(Y_Train_Seq).reshape(len(Y_Train_Seq),1)
-"""
 
 Data_Valid_Seq = []
 
@@ -162,18 +129,6 @@ for i in range(int(Data_Valid_Seq.shape[0])):
     for col_i in range(Data_Valid_Seq.shape[2]):
         Data_Valid_Seq[i,:,col_i] = [ ((float(p)/float(Data_Valid_Seq[i,0,col_i]))-1) for p in Data_Valid_Seq[i,:,col_i]]
 
-"""
-Y_Valid_Seq = []
-
-for i in range(Length_Seq,len(Y_Valid)):
-    Y_Valid_Seq.append(Y_Valid_Norm[i,0])
-
-Y_Valid_Seq = np.array(Y_Valid_Seq).reshape(len(Y_Valid_Seq))
-
-print(len(Y_Valid_Seq))
-
-"""
-
 # Création de X_Train/ Y_Train / X_Valid Y_Valid
 
 X_Train_Seq = Data_Train_Seq[:,:,0:4]
@@ -194,7 +149,6 @@ DropOut = 0.2
 
 Model = Sequential()
 
-
 Model.add(LSTM(units=Nb_Neurone,return_sequences=True , input_shape=(Length_Seq,NbFeatures)))
 Model.add(Dropout(DropOut))
 
@@ -207,28 +161,19 @@ Model.add(Dropout(DropOut))
 Model.add(LSTM(units=Nb_Neurone))
 Model.add(Dropout(DropOut))
 
-
 Model.add(Dense(units=1))
 
-Model.compile(optimizer='adam',loss='mse')
 
+Model.compile(optimizer='adam',loss='mse')
 
 
 Model.fit(X_Train_Seq,Y_Train, batch_size = 25 , epochs = 30)
 
 
+
 Y_Pred_Norm = Model.predict(X_Valid_Seq)
-Y_Pred = Y_Pred_Norm
-"""
-for i in range(X_Valid_Seq.shape[0]):
-    Y_Pred[i,0] =  ( Y_Pred[i,0] + 1 ) *
 
-Y_Valid_Seq = Sc.inverse_transform(Y_Valid_Seq)
-"""
-print(len(Y_Pred))
-print(len(Y_Valid))
-
-y=plt.plot(Y_Valid,color='green')+plt.plot(Y_Pred,color='red')
+y=plt.plot(Y_Valid,color='green')+plt.plot(Y_Pred_Norm,color='red')
 
 
 Model.reset_states()
