@@ -105,6 +105,8 @@ Data_Train_Seq = np.array(Data_Train_Seq)
 
 Data_Train_Seq = np.swapaxes(np.swapaxes(Data_Train_Seq, 0, 1), 1, 2)
 
+
+
 Data_Valid_Seq = []
 
 for col in range(Data_Valid.shape[1]):
@@ -118,18 +120,22 @@ Data_Valid_Seq = np.array(Data_Valid_Seq)
 
 Data_Valid_Seq = np.swapaxes(np.swapaxes(Data_Valid_Seq, 0, 1), 1, 2)
 
+Data_Denorm = np.copy(Data_Valid_Seq)
+
 ### Normalisation des données : 
 ## Ni = (Pi/P0) - 1 
 
 for i in range(int(Data_Train_Seq.shape[0])):
+    Base_Price_Seq = Data_Train_Seq[i,0,0]
     for col_i in range(Data_Train_Seq.shape[2]):
-        Data_Train_Seq[i,:,col_i] = [ ((float(p)/float(Data_Train_Seq[i,0,col_i]))-1) for p in Data_Train_Seq[i,:,col_i]]
+        Data_Train_Seq[i,:,col_i] = [ ((float(p)/float(Base_Price_Seq))-1) for p in Data_Train_Seq[i,:,col_i]]
 
 for i in range(int(Data_Valid_Seq.shape[0])):
+    Base_Price_Seq = Data_Valid_Seq[i,0,0]
     for col_i in range(Data_Valid_Seq.shape[2]):
-        Data_Valid_Seq[i,:,col_i] = [ ((float(p)/float(Data_Valid_Seq[i,0,col_i]))-1) for p in Data_Valid_Seq[i,:,col_i]]
+        Data_Valid_Seq[i,:,col_i] = [ ((float(p)/float(Base_Price_Seq))-1) for p in Data_Valid_Seq[i,:,col_i]]
 
-# Création de X_Train/ Y_Train / X_Valid Y_Valid
+# Création de X_Train/ Y_Train / X_Valid / Y_Valid (Norm/Denorm)
 
 X_Train_Seq = Data_Train_Seq[:,:,0:4]
 Y_Train = Data_Train_Seq[:,19:20,4:5].reshape(len(Data_Train_Seq),1)
@@ -138,7 +144,7 @@ Y_Train = Data_Train_Seq[:,19:20,4:5].reshape(len(Data_Train_Seq),1)
 X_Valid_Seq = Data_Valid_Seq[:,:,0:4]
 Y_Valid = Data_Valid_Seq[:,19:20,4:5].reshape(len(Data_Valid_Seq),1)
 
-
+Y_Valid_Denorm = Data_Denorm[:,19:20,4:5].reshape(len(Data_Denorm),1)
 
 ### Création du modèle ###
 
@@ -171,9 +177,22 @@ Model.fit(X_Train_Seq,Y_Train, batch_size = 25 , epochs = 30)
 
 
 
-Y_Pred_Norm = Model.predict(X_Valid_Seq)
+Y_Pred = Model.predict(X_Valid_Seq)
 
-y=plt.plot(Y_Valid,color='green')+plt.plot(Y_Pred_Norm,color='red')
+### Dénormalisation des données : 
+## Ni = (Pi/P0) - 1 
+## Pi = (Ni + 1)`* P0
+
+for i in range(Data_Valid_Seq.shape[0]):
+    Base_Price_Seq = Data_Denorm[i,0,0]
+    Y_Pred [i,:] = [( var  + 1 ) * Base_Price_Seq for var in Y_Pred[i,:]]
+
+
+
+
+
+
+y=plt.plot(Y_Valid_Denorm,color='green')+plt.plot(Y_Pred,color='red')
 
 
 Model.reset_states()
