@@ -173,7 +173,7 @@ Model.add(Dense(units=1))
 Model.compile(optimizer='adam',loss='mse')
 
 
-Model.fit(X_Train_Seq,Y_Train, batch_size = 25 , epochs = 30)
+Trained_Model = Model.fit(X_Train_Seq,Y_Train, batch_size = 25 , epochs = 42 ,validation_data=(X_Valid_Seq,Y_Valid))
 
 
 
@@ -194,6 +194,23 @@ for i in range(Data_Valid_Seq.shape[0]):
 
 y=plt.plot(Y_Valid_Denorm,color='green')+plt.plot(Y_Pred,color='red')
 
+
+PredVsPrice = Y_Pred[:,:] - Y_Valid_Denorm[:,:]
+print(abs(PredVsPrice).mean())
+
+print('\nhistory dict:', Trained_Model.history)
+
+Train_Loss, Valid_Loss = Trained_Model.history['loss'], Trained_Model.history['val_loss']
+Graphe = plt.plot(Train_Loss,color = 'blue') + plt.plot(Valid_Loss,color='orange')
+
+Train_Loss = np.array(Train_Loss)
+Valid_Loss = np.array(Valid_Loss)
+
+
+Index_Best_Valid = np.argmax(Valid_Loss)
+
+print("Best Valid Error : " + str(Valid_Loss.min()) + "     Nb Epochs : " + str(Index_Best_Valid + 1 ))
+print("Train error : " + str(Valid_Loss[Index_Best_Valid]))
 
 Model.reset_states()
 
