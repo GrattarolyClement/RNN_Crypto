@@ -175,6 +175,8 @@ def Eval_Training(Trained_Model):
 
 def Save_Model(Model, Model_Name) : 
     
+    print("Sauvergarde du fichier ? ")
+    
     BoolSave = input()
     
     if BoolSave == "yes" or BoolSave == 'oui' or BoolSave == "Yes" or BoolSave == 'Oui' : 
@@ -187,7 +189,7 @@ def Save_Model(Model, Model_Name) :
 
 def Load_Weights(Model, FileName):
     
-    Model.reset_states()
+    
 
     Model.load_weights('/Users/clementgrattaroly/Python/RNN_Crypto/Saved_Model/'+FileName)
     
@@ -251,7 +253,7 @@ Model = Create_Model(Length_Seq, Nb_Features, Nb_couches_LSTM = 4, Loss = 'mse',
 
 ### Entraînement du modèle 
 
-Trained_Model = Model.fit(X_Train_Seq,Y_Train, batch_size = 25 , epochs = 10 ,validation_data=(X_Valid_Seq,Y_Valid))
+Trained_Model = Model.fit(X_Train_Seq,Y_Train, batch_size = 25 , epochs = 200 ,validation_data=(X_Valid_Seq,Y_Valid))
 
 
 ### Here we can load a former trained model from Save_Model directory
@@ -279,9 +281,7 @@ Eval_Training(Trained_Model)
 Save_Model(Model, 'Model_0')
 
 
-### Reset manualy current model weights
 
-Model.reset_states()
 
 
 
