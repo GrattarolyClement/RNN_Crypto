@@ -24,6 +24,7 @@ from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Dropout
 from keras.layers import Flatten
+from Tech_analysis_Trading import *
 
 ### Création des datasets de training et d'évaluation 
 
@@ -85,7 +86,7 @@ def Seq_Normalization(Data_Seq) :
 
 ### Fonction permettant de créer un modèle de réseau de neuronnes récurrents 
     
-def Create_Model(Length_Seg, Nb_Features, Nb_couches_LSTM, Loss, Optimizer, Nb_Neurone = 50,DropOut = 0.2):
+def Create_Model(Length_Seg, Nb_Features, Nb_couches_LSTM, Loss, Optimizer, Nb_Neurone ,DropOut ):
     
     # Initialisation du modèle
     
@@ -248,19 +249,27 @@ Y_Valid_Denorm = Data_Denorm[:,Length_Seq-1:Length_Seq,4:5].reshape(len(Data_Den
 
 Nb_Features = X_Train_Seq.shape[2]
 
-Model = Create_Model(Length_Seq, Nb_Features, Nb_couches_LSTM = 4, Loss = 'mse', Optimizer = 'adam', Nb_Neurone = 50,DropOut = 0.2)
+Nb_Neurone = 50
+DropOut = 0.2
+Nb_couches_LSTM = 4
+Loss = 'mean_absolute_percentage_error'
+Optimizer = 'adam'
+
+Model = Create_Model(Length_Seq, Nb_Features, Nb_couches_LSTM, Loss, Optimizer , Nb_Neurone,DropOut)
 
 
 ### Entraînement du modèle 
+Nb_Epochs = 200
+Batch_Size = 25
 
-Trained_Model = Model.fit(X_Train_Seq,Y_Train, batch_size = 25 , epochs = 200 ,validation_data=(X_Valid_Seq,Y_Valid))
+Trained_Model = Model.fit(X_Train_Seq,Y_Train, batch_size = Batch_Size , epochs = Nb_Epochs, validation_data=(X_Valid_Seq,Y_Valid))
 
 
 ### Here we can load a former trained model from Save_Model directory
 
 
 
-# Model = Load_Weights(Model,FileName)
+#Model = Load_Weights(Model,"Model_0")
 
 
 ### Prédictions et Dénormalisation des données
@@ -269,6 +278,7 @@ Trained_Model = Model.fit(X_Train_Seq,Y_Train, batch_size = 25 , epochs = 200 ,v
 Y_Pred = Denormalized_Predictions(Model, X_Valid_Seq, Data_Denorm, Y_Valid_Denorm)
 
 
+### A checker
 
 PredVsPrice = Y_Pred[:] - Y_Valid_Denorm[:]
 print("Écart moyen entre la prédiction et le marché " + str(PredVsPrice.mean()))
@@ -276,9 +286,21 @@ print("Écart moyen entre la prédiction et le marché " + str(PredVsPrice.mean(
 
 Eval_Training(Trained_Model)
 
+Trend_Predict_Eval(Length_Seq,Data_Denorm,Y_Pred,0.01)
+
+# Fonction de trade sur les futures 
+
+Top_Var = 0.01
+Bottom_Var = -0.01
+
+TradingFutures(1000,Data_Denorm,Y_Pred,10,Top_Var,Bottom_Var,Length_Seq)
+
 ### Function to save the trained model in RNN_Crypto directory
 
-Save_Model(Model, 'Model_0')
+Model_Name = 'Model ' + ' loss = ' + Loss + ' E = ' + str(Nb_Epochs) + ' B = ' + str(Batch_Size) + ' N = ' + str(Nb_Neurone) + ' D = ' + str(DropOut) + ' LSTM = ' + str(Nb_couches_LSTM)
+Save_Model(Model, Model_Name)
+
+
 
 
 

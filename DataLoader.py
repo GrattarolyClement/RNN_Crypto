@@ -10,15 +10,28 @@ import pandas as pd
 import numpy as np 
 import tensorflow as tf
 import math as m
+from alpha_vantage.cryptocurrencies import CryptoCurrencies
+
 
 class DataLoader(object):
     
     def InitData(self,FileName):
         
-        DataFrame = pd.read_csv("/Users/clementgrattaroly/Python/RNN_Crypto/DATA/"+FileName)#.to_numpy()
+        DataFrame = pd.read_csv("/Users/clementgrattaroly/Python/RNN_Crypto/DATA/"+FileName)
         self.Data = DataFrame
         self.Base = DataFrame[["Close"]]
         self.DataSet = None
+    
+    def Init_Crypto_Currency_API_Alpha_Vantage(self , API_Key, Crypto_Currency , Market):
+    
+        cc = CryptoCurrencies(key=API_Key,output_format='pandas')
+        
+        self.Data, self.MetaData = cc.get_digital_currency_daily(Crypto_Currency,Market)
+        self.Base = self.data['4a. close (USD)']
+        self.DataSet = None
+        
+        
+        
         
     def GetBase(self):
         return self.Base
