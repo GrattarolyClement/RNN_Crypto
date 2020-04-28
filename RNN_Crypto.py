@@ -36,7 +36,7 @@ def Get_Train_Val_Sets(NewDataSet,SplitCoef):
     ### On aligne les datas avec les targets souhaités (Train).
     
     X = NewDataSet.iloc[0:len(NewDataSet)-1,0:Nb_Features].dropna().reset_index(drop=True)
-    Y = NewDataSet.iloc[1:len(NewDataSet),Nb_Features:5].dropna().reset_index(drop=True)
+    Y = NewDataSet.iloc[1:len(NewDataSet),Nb_Features:Nb_Features+1].dropna().reset_index(drop=True)
     
     FinalDataSet = pd.concat((X,Y),axis=1) # Axis = 1 : On cocnatene les colonnes
     
@@ -75,12 +75,21 @@ def Seq_Normalization(Data_Seq) :
     
     for i in range(int(Data_Seq.shape[0])):
     
-        Base_Price_Norm = Data_Seq[i,0,0] # On set notre prix de normalisation, 1er prix close 
+        Base_Price_Norm = Data_Seq[i,0,0] # On set notre prix de normalisation, 1er prix close pour la valeur à prédire (Y) sinon on normalise par rapport au premier prix de la seq et pour chaque colonne
         
         for col_i in range(Data_Seq.shape[2]):
             
-            Data_Seq[i,:,col_i] = [ ((float(p)/float(Base_Price_Norm))-1) for p in Data_Seq[i,:,col_i]]
-    
+            
+            if(col_i == Data_Seq.shape[2]-1):
+                
+                Data_Seq[i,:,col_i] = [ ((float(p)/float(Base_Price_Norm))-1) for p in Data_Seq[i,:,col_i]]
+                
+            else : 
+                
+                Data_Seq[i,:,col_i] = [ ((float(p)/float(Data_Seq[i,0,col_i]))-1) for p in Data_Seq[i,:,col_i]]
+
+                
+                
     return Data_Seq
 
 
@@ -190,8 +199,6 @@ def Save_Model(Model, Model_Name) :
 
 def Load_Weights(Model, FileName):
     
-    
-
     Model.load_weights('/Users/clementgrattaroly/Python/RNN_Crypto/Saved_Model/'+FileName)
     
     return Model
@@ -199,12 +206,12 @@ def Load_Weights(Model, FileName):
 
 ### Data importation & DataSet Creation ###
 
-Data = DataLoader()
+Data_ETH = DataLoader()
 
-Data.InitData('BTC-USD_0.csv')
-Data.DataSetConstruction( Window1 = 10, Window2 = 50)
+Data_ETH.Init_Crypto_Currency_API_Alpha_Vantage('PQWPDE41U7RFLYIE','ETH','USD')
+Data_ETH.DataSetConstruction( Window1 = 10, Window2 = 50)
 
-NewDataSet = Data.GetDataSet()
+NewDataSet = Data_ETH.GetDataSet()
 
 
 ### Training & Validation Sets Creation ###
@@ -237,30 +244,32 @@ Data_Valid_Seq = Seq_Normalization(Data_Valid_Seq)
 
 # Création de X_Train/ Y_Train / X_Valid / Y_Valid (Norm/Denorm)
 
-X_Train_Seq = Data_Train_Seq[:,:,0:4]
-X_Valid_Seq = Data_Valid_Seq[:,:,0:4]
+Col_Dim = Data_Train_Seq.shape[2]
+
+X_Train_Seq = Data_Train_Seq[:,:,0:Col_Dim-1]
+X_Valid_Seq = Data_Valid_Seq[:,:,0:Col_Dim-1]
 
 
-Y_Train = Data_Train_Seq[:,Length_Seq-1:Length_Seq,4:5].reshape(len(Data_Train_Seq),1)
-Y_Valid = Data_Valid_Seq[:,Length_Seq-1:Length_Seq,4:5].reshape(len(Data_Valid_Seq),1)
-Y_Valid_Denorm = Data_Denorm[:,Length_Seq-1:Length_Seq,4:5].reshape(len(Data_Denorm),1)
+Y_Train = Data_Train_Seq[:,Length_Seq-1:Length_Seq,Col_Dim-1:Col_Dim].reshape(len(Data_Train_Seq),1)
+Y_Valid = Data_Valid_Seq[:,Length_Seq-1:Length_Seq,Col_Dim-1:Col_Dim].reshape(len(Data_Valid_Seq),1)
+Y_Valid_Denorm = Data_Denorm[:,Length_Seq-1:Length_Seq,Col_Dim-1:Col_Dim].reshape(len(Data_Denorm),1)
 
 ### Création du modèle ###
 
 Nb_Features = X_Train_Seq.shape[2]
 
 Nb_Neurone = 50
-DropOut = 0.2
-Nb_couches_LSTM = 4
-Loss = 'mean_absolute_percentage_error'
+DropOut = 0.3
+Nb_couches_LSTM = 3
+Loss = 'mean_squared_error'
 Optimizer = 'adam'
 
 Model = Create_Model(Length_Seq, Nb_Features, Nb_couches_LSTM, Loss, Optimizer , Nb_Neurone,DropOut)
 
 
 ### Entraînement du modèle 
-Nb_Epochs = 200
-Batch_Size = 25
+Nb_Epochs = 120
+Batch_Size = 10
 
 Trained_Model = Model.fit(X_Train_Seq,Y_Train, batch_size = Batch_Size , epochs = Nb_Epochs, validation_data=(X_Valid_Seq,Y_Valid))
 
@@ -280,24 +289,24 @@ Y_Pred = Denormalized_Predictions(Model, X_Valid_Seq, Data_Denorm, Y_Valid_Denor
 
 ### A checker
 
-PredVsPrice = Y_Pred[:] - Y_Valid_Denorm[:]
-print("Écart moyen entre la prédiction et le marché " + str(PredVsPrice.mean()))
+PredVsPrice = abs(Y_Pred[:] - Y_Valid_Denorm[:])
+print("Écart absolu moyen entre la prédiction et le marché " + str(PredVsPrice.mean()))
 
 
 Eval_Training(Trained_Model)
 
-Trend_Predict_Eval(Length_Seq,Data_Denorm,Y_Pred,0.01)
+Trend_Predict_Eval(Length_Seq,Data_Denorm,Y_Pred,0.005)
 
 # Fonction de trade sur les futures 
 
-Top_Var = 0.01
-Bottom_Var = -0.01
+Top_Var = 0.005
+Bottom_Var = -0.005
 
 TradingFutures(1000,Data_Denorm,Y_Pred,10,Top_Var,Bottom_Var,Length_Seq)
 
 ### Function to save the trained model in RNN_Crypto directory
 
-Model_Name = 'Model ' + ' loss = ' + Loss + ' E = ' + str(Nb_Epochs) + ' B = ' + str(Batch_Size) + ' N = ' + str(Nb_Neurone) + ' D = ' + str(DropOut) + ' LSTM = ' + str(Nb_couches_LSTM)
+Model_Name = 'Model_ETH' + ' loss = ' + Loss + ' E = ' + str(Nb_Epochs) + ' B = ' + str(Batch_Size) + ' N = ' + str(Nb_Neurone) + ' D = ' + str(DropOut) + ' LSTM = ' + str(Nb_couches_LSTM)
 Save_Model(Model, Model_Name)
 
 
